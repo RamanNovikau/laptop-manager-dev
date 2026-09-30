@@ -1,64 +1,64 @@
-# Laptop Status Manager
+# Управление статусами ноутбуков
 
-[Русская версия](README.ru.md)
+[English version](README.md)
 
-A small TypeScript implementation for managing laptop inventory status transitions with validation, transition history, and a 14-day return rule.
+Небольшая реализация на TypeScript для управления статусами ноутбуков на складе с проверкой переходов, историей изменений и правилом возврата в течение 14 дней.
 
-## Plan
+## План
 
-1. Define the laptop statuses, laptop id, and status history types.
-2. Define allowed status transitions and implement the status change function.
-3. Add validation for invalid transitions and the 14-day return rule.
-4. Add a simple typed error class for rejected transitions.
-5. Write Jest tests covering valid and invalid transitions, return rules, history, and errors.
+1. Определить статусы ноутбука, айди ноутбука и тип записи истории статусов.
+2. Определить допустимые переходы и реализовать функцию изменения статуса.
+3. Добавить проверку недопустимых переходов и правило возврата в течение 14 дней.
+4. Добавить простой типизированный класс ошибок для отклонённых переходов.
+5. Написать Jest-тесты для допустимых и недопустимых переходов, возврата, истории и ошибок.
 
-## Solution
+## Решение
 
-The implementation is intentionally small and does not use a database, API, frontend, or persistence layer.
+Реализация специально сделана небольшой и не использует базу данных, API, frontend или persistence layer.
 
-The project is split into several simple parts:
+Проект разделён на несколько простых частей:
 
-* `src/types.ts` contains the main TypeScript types.
-* `src/errors.ts` contains the custom error used for rejected status transitions.
-* `src/laptop.ts` contains the business logic for changing laptop statuses.
-* `src/index.ts` provides a small local example for manually checking how the solution works.
-* `tests/laptop.test.ts` contains unit tests.
+* `src/types.ts` содержит основные TypeScript-типы.
+* `src/errors.ts` содержит кастомную ошибку для отклонённых переходов статуса.
+* `src/laptop.ts` содержит бизнес-логику изменения статусов ноутбука.
+* `src/index.ts` содержит небольшой пример для локальной проверки работы решения.
+* `tests/laptop.test.ts` содержит unit-тесты.
 
-Allowed transitions are defined explicitly in a transition table:
+Допустимые переходы явно определены в таблице переходов:
 
 ```text
 InStock -> Reserved, Sold, WrittenOff
 Reserved -> InStock, Sold
 Sold -> InStock
-WrittenOff -> no further transitions
+WrittenOff -> дальнейшие переходы запрещены
 ```
 
-The `Laptop` model contains `id` to identify a laptop and `soldAt` because the `Sold -> InStock` transition depends directly on the time elapsed since the sale.
+Модель `Laptop` содержит `id` для идентификации ноутбука и `soldAt`, поскольку переход `Sold -> InStock` напрямую зависит от времени, прошедшего с момента продажи.
 
-Every successful status change creates a history entry containing:
+Каждое успешное изменение статуса создаёт запись в истории, содержащую:
 
-* previous status
-* new status
-* date
+* предыдущий статус
+* новый статус
+* дату
 
-The function receives the current date as an argument instead of using `new Date()` internally. This makes the business logic deterministic and easier to test.
+Текущая дата передаётся в функцию аргументом вместо использования `new Date()` непосредственно внутри бизнес-логики. Это делает логику детерминированной и удобной для тестирования.
 
 ## AI-generated code
 
-The implementation was developed with AI assistance.
+Реализация была выполнена с использованием AI.
 
-The main coding agent was **DeepSeek Harness Agent**. It was used to implement the TypeScript solution, business logic, and Jest tests.
+Основным coding agent был **DeepSeek Harness Agent**. Он использовался для реализации TypeScript-решения, бизнес-логики и Jest-тестов.
 
-**ChatGPT** was used as an additional AI assistant for:
+**ChatGPT** использовался как дополнительный AI-помощник для:
 
-* reviewing the implementation;
-* discussing the project structure;
-* discussing the `id` and `soldAt` model decisions;
-* designing the error handling layer;
-* reviewing test coverage;
-* preparing and refining the README documentation.
+* ревью реализации;
+* обсуждения структуры проекта;
+* обсуждения решений по `id` и `soldAt`;
+* проектирования слоя обработки ошибок;
+* проверки покрытия тестами;
+* подготовки и редактирования README.
 
-The following files contain AI-generated code:
+Следующие файлы содержат код, сгенерированный AI:
 
 * `src/types.ts`
 * `src/errors.ts`
@@ -66,76 +66,76 @@ The following files contain AI-generated code:
 * `src/index.ts`
 * `tests/laptop.test.ts`
 
-AI-generated code is marked with:
+AI-generated код помечен комментарием:
 
 ```ts
 // AI GENERATED
 ```
 
-The AI-generated implementation was reviewed and manually adjusted where necessary.
+AI-generated реализация была проверена и при необходимости изменена вручную.
 
-According to the task requirements, commits should use:
-
-```text
-ai:     AI-generated code without changes
-manual: manually written code or modifications to AI-generated code
-```
-
-No commits were created automatically by the AI.
-
-## What was unclear
-
-### 1. "No later than 14 days after the sale"
-
-I interpreted this as allowing a return exactly 14 days after the sale.
-
-For example:
+Согласно требованиям задания, коммиты должны использовать следующие префиксы:
 
 ```text
-Sale:    September 1, 10:00
-Return:  September 15, 10:00
-Result:  allowed
+ai:     AI-generated код без изменений
+manual: написанный вручную код или изменения AI-generated кода
 ```
 
-A return after that exact moment is rejected.
+AI автоматически не создавал коммиты.
 
-The implementation therefore uses:
+## Что в задании было непонятно
+
+### 1. "Не позднее 14 дней после продажи"
+
+Я трактовал это условие как возможность вернуть ноутбук **ровно через 14 дней после продажи**.
+
+Например:
+
+```text
+Продажа:   1 сентября, 10:00
+Возврат:   15 сентября, 10:00
+Результат: разрешено
+```
+
+Возврат после этого момента запрещается.
+
+Поэтому в реализации используется условие:
 
 ```ts
 elapsedTime <= 14 days
 ```
 
-### 2. Where to store the sale date
+### 2. Где хранить дату продажи
 
-The task requires checking the time between the sale and the return.
+Для проверки правила возврата необходимо знать время, прошедшее между продажей и возвратом.
 
-The sale date could technically be obtained from the status history, but I decided to store it explicitly in:
+Технически дату продажи можно было бы получить из истории статусов, однако я решил хранить её отдельно:
 
 ```ts
 soldAt?: Date
 ```
 
-This makes the `Sold -> InStock` business rule straightforward and avoids searching through the history every time a return is processed.
+Это делает бизнес-правило `Sold -> InStock` более простым и позволяет не искать дату продажи в истории при каждом возврате.
 
-The history is still kept as an audit trail of all status changes.
+История при этом сохраняется отдельно как audit trail всех изменений статуса.
 
-### 3. WrittenOff date
+### 3. Дата списания
 
-I did not add a separate `writtenOffAt` field.
+Я не добавлял отдельное поле `writtenOffAt`.
 
-The write-off date is already available in the history entry:
+Дата списания уже доступна в записи истории:
 
 ```text
 InStock -> WrittenOff
 ```
 
-Adding another field would duplicate the same information without being required by the task.
+Добавление отдельного поля дублировало бы эту информацию и не требовалось условиями задания.
 
 ## AI prompts
 
-### Prompt used with DeepSeek Harness Agent
+### Промт для DeepSeek Harness Agent
 
-The following prompt was used as the main implementation prompt:
+Основной промт для реализации:
 
 ```text
 You are working on a TypeScript coding test.
@@ -238,7 +238,7 @@ Do NOT create commits automatically. Just structure the changes so it is easy to
 Use English for code, variable names, types, test descriptions, and README.
 ```
 
-### Russian version of the prompt
+### Русская версия промта
 
 ```text
 Ты работаешь над тестовым заданием на TypeScript.
@@ -341,9 +341,10 @@ README должен содержать:
 Используй английский язык для кода, названий переменных, типов, описаний тестов и README.
 ```
 
-### Additional ChatGPT prompts
+### Дополнительные промты ChatGPT
 
-ChatGPT was also used during the implementation for code review and design decisions, including:
+ChatGPT также использовался для ревью кода и обсуждения архитектурных решений:
+
 
 ```text
 Add a simple index.ts entry point so the project can be built and run locally to demonstrate how the status transitions work.
@@ -353,51 +354,51 @@ Add a simple index.ts entry point so the project can be built and run locally to
 Prepare the README according to the task requirements. Include the implementation plan, solution, AI-generated code, unclear requirements, and exact AI prompts.
 ```
 
-## Testing
+## Тестирование
 
-Install dependencies:
+Установить зависимости:
 
 ```bash
 npm install
 ```
 
-Run TypeScript compilation:
+Проверить компиляцию TypeScript:
 
 ```bash
 npm run build
 ```
 
-Run unit tests:
+Запустить unit-тесты:
 
 ```bash
 npm test
 ```
 
-Run the local demonstration:
+Запустить локальную демонстрацию:
 
 ```bash
 npm run build
 npm start
 ```
 
-The demo in `src/index.ts` shows several valid status changes and prints the resulting laptop state and status history.
+`src/index.ts` показывает несколько допустимых изменений статуса и выводит итоговое состояние ноутбука и историю изменений.
 
 ## Git commits
 
-The task requires distinguishing AI-generated code from manual changes.
+В задании требуется разделять AI-generated код и ручные изменения.
 
-Examples:
+Пример для AI-generated кода без изменений:
 
 ```bash
 git add src/laptop.ts
 git commit -m "ai: implement laptop status transitions"
 ```
 
-For manually written code or modifications to AI-generated code:
+Для написанного вручную кода или изменений AI-generated кода:
 
 ```bash
 git add src/laptop.ts
 git commit -m "manual: refine transition error handling"
 ```
 
-No commits are created automatically by the AI.
+AI автоматически не создаёт коммиты.
