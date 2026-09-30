@@ -1,6 +1,10 @@
 // AI GENERATED
 
 import { changeLaptopStatus } from '../src/laptop';
+import {
+  LaptopStatusTransitionError,
+  TransitionErrorReason,
+} from '../src/errors';
 import { Laptop, LaptopStatus } from '../src/types';
 
 const createLaptop = (
@@ -10,6 +14,23 @@ const createLaptop = (
   status,
   history: [],
 });
+
+const expectTransitionError = (
+  action: () => void,
+  reason: TransitionErrorReason,
+) => {
+  try {
+    action();
+    throw new Error('Expected transition to throw');
+  } catch (error) {
+    expect(error).toBeInstanceOf(LaptopStatusTransitionError);
+
+    const transitionError = error as LaptopStatusTransitionError;
+
+    expect(transitionError.reason).toBe(reason);
+    expect(transitionError.laptopId).toBe('laptop-123');
+  }
+};
 
 describe('changeLaptopStatus', () => {
   const date = new Date('2026-09-30T10:00:00.000Z');
@@ -122,24 +143,27 @@ describe('changeLaptopStatus', () => {
     test('InStock -> InStock', () => {
       const laptop = createLaptop();
 
-      expect(() =>
-        changeLaptopStatus(laptop, LaptopStatus.InStock, date),
-      ).toThrow(
-        'Invalid status transition: InStock -> InStock',
+      expectTransitionError(
+        () => changeLaptopStatus(laptop, LaptopStatus.InStock, date),
+        'not-allowed',
       );
     });
 
     test('Reserved -> Reserved', () => {
       const laptop = createLaptop(LaptopStatus.Reserved);
 
-      expect(() =>
-        changeLaptopStatus(
-          laptop,
-          LaptopStatus.Reserved,
-          date,
-        ),
-      ).toThrow(
-        'Invalid status transition: Reserved -> Reserved',
+      expectTransitionError(
+        () => changeLaptopStatus(laptop, LaptopStatus.Reserved, date),
+        'not-allowed',
+      );
+    });
+
+    test('Reserved -> WrittenOff', () => {
+      const laptop = createLaptop(LaptopStatus.Reserved);
+
+      expectTransitionError(
+        () => changeLaptopStatus(laptop, LaptopStatus.WrittenOff, date),
+        'not-allowed',
       );
     });
 
@@ -151,14 +175,23 @@ describe('changeLaptopStatus', () => {
         soldAt: date,
       };
 
-      expect(() =>
-        changeLaptopStatus(
-          laptop,
-          LaptopStatus.Reserved,
-          date,
-        ),
-      ).toThrow(
-        'Invalid status transition: Sold -> Reserved',
+      expectTransitionError(
+        () => changeLaptopStatus(laptop, LaptopStatus.Reserved, date),
+        'not-allowed',
+      );
+    });
+
+    test('Sold -> Sold', () => {
+      const laptop: Laptop = {
+        id: 'laptop-123',
+        status: LaptopStatus.Sold,
+        history: [],
+        soldAt: date,
+      };
+
+      expectTransitionError(
+        () => changeLaptopStatus(laptop, LaptopStatus.Sold, date),
+        'not-allowed',
       );
     });
 
@@ -170,56 +203,45 @@ describe('changeLaptopStatus', () => {
         soldAt: date,
       };
 
-      expect(() =>
-        changeLaptopStatus(
-          laptop,
-          LaptopStatus.WrittenOff,
-          date,
-        ),
-      ).toThrow(
-        'Invalid status transition: Sold -> WrittenOff',
+      expectTransitionError(
+        () => changeLaptopStatus(laptop, LaptopStatus.WrittenOff, date),
+        'not-allowed',
       );
     });
 
     test('WrittenOff -> InStock', () => {
       const laptop = createLaptop(LaptopStatus.WrittenOff);
 
-      expect(() =>
-        changeLaptopStatus(
-          laptop,
-          LaptopStatus.InStock,
-          date,
-        ),
-      ).toThrow(
-        'Invalid status transition: WrittenOff -> InStock',
+      expectTransitionError(
+        () => changeLaptopStatus(laptop, LaptopStatus.InStock, date),
+        'terminal-state',
       );
     });
 
     test('WrittenOff -> Reserved', () => {
       const laptop = createLaptop(LaptopStatus.WrittenOff);
 
-      expect(() =>
-        changeLaptopStatus(
-          laptop,
-          LaptopStatus.Reserved,
-          date,
-        ),
-      ).toThrow(
-        'Invalid status transition: WrittenOff -> Reserved',
+      expectTransitionError(
+        () => changeLaptopStatus(laptop, LaptopStatus.Reserved, date),
+        'terminal-state',
       );
     });
 
     test('WrittenOff -> Sold', () => {
       const laptop = createLaptop(LaptopStatus.WrittenOff);
 
-      expect(() =>
-        changeLaptopStatus(
-          laptop,
-          LaptopStatus.Sold,
-          date,
-        ),
-      ).toThrow(
-        'Invalid status transition: WrittenOff -> Sold',
+      expectTransitionError(
+        () => changeLaptopStatus(laptop, LaptopStatus.Sold, date),
+        'terminal-state',
+      );
+    });
+
+    test('WrittenOff -> WrittenOff', () => {
+      const laptop = createLaptop(LaptopStatus.WrittenOff);
+
+      expectTransitionError(
+        () => changeLaptopStatus(laptop, LaptopStatus.WrittenOff, date),
+        'terminal-state',
       );
     });
   });
@@ -236,14 +258,9 @@ describe('changeLaptopStatus', () => {
         soldAt,
       };
 
-      expect(() =>
-        changeLaptopStatus(
-          laptop,
-          LaptopStatus.InStock,
-          returnDate,
-        ),
-      ).toThrow(
-        'Cannot return laptop: the 14-day return period has expired',
+      expectTransitionError(
+        () => changeLaptopStatus(laptop, LaptopStatus.InStock, returnDate),
+        'return-window-expired',
       );
     });
 
@@ -258,28 +275,18 @@ describe('changeLaptopStatus', () => {
         soldAt,
       };
 
-      expect(() =>
-        changeLaptopStatus(
-          laptop,
-          LaptopStatus.InStock,
-          returnDate,
-        ),
-      ).toThrow(
-        'Cannot return laptop: return date cannot be before sale date',
+      expectTransitionError(
+        () => changeLaptopStatus(laptop, LaptopStatus.InStock, returnDate),
+        'return-before-sale',
       );
     });
 
     test('rejects return when sale date is missing', () => {
       const laptop = createLaptop(LaptopStatus.Sold);
 
-      expect(() =>
-        changeLaptopStatus(
-          laptop,
-          LaptopStatus.InStock,
-          date,
-        ),
-      ).toThrow(
-        'Cannot process return: sale date is missing',
+      expectTransitionError(
+        () => changeLaptopStatus(laptop, LaptopStatus.InStock, date),
+        'sale-date-unknown',
       );
     });
   });
@@ -384,7 +391,6 @@ describe('changeLaptopStatus', () => {
 
       expect(laptop.status).toBe(LaptopStatus.InStock);
       expect(laptop.history).toHaveLength(0);
-
       expect(result).not.toBe(laptop);
     });
   });
