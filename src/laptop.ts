@@ -1,10 +1,9 @@
-// AI GENERATED
-
 import {
   Laptop,
   LaptopStatus,
   StatusHistoryEntry,
 } from './types';
+import { LaptopStatusTransitionError } from './errors';
 
 const ALLOWED_TRANSITIONS: Record<LaptopStatus, LaptopStatus[]> = {
   [LaptopStatus.InStock]: [
@@ -32,29 +31,57 @@ export function changeLaptopStatus(
 ): Laptop {
   const currentStatus = laptop.status;
 
+  if (currentStatus === LaptopStatus.WrittenOff) {
+    throw new LaptopStatusTransitionError(
+      laptop.id,
+      currentStatus,
+      newStatus,
+      'terminal-state',
+      `Cannot change laptop ${laptop.id}: WrittenOff is a terminal status`,
+    );
+  }
+
   if (!ALLOWED_TRANSITIONS[currentStatus].includes(newStatus)) {
-    throw new Error(
+    throw new LaptopStatusTransitionError(
+      laptop.id,
+      currentStatus,
+      newStatus,
+      'not-allowed',
       `Invalid status transition: ${currentStatus} -> ${newStatus}`,
     );
   }
 
   if (currentStatus === LaptopStatus.Sold) {
     if (!laptop.soldAt) {
-      throw new Error('Cannot process return: sale date is missing');
+      throw new LaptopStatusTransitionError(
+        laptop.id,
+        currentStatus,
+        newStatus,
+        'sale-date-unknown',
+        `Cannot return laptop ${laptop.id}: sale date is missing`,
+      );
     }
 
     const elapsedTime =
       currentDate.getTime() - laptop.soldAt.getTime();
 
     if (elapsedTime < 0) {
-      throw new Error(
-        'Cannot return laptop: return date cannot be before sale date',
+      throw new LaptopStatusTransitionError(
+        laptop.id,
+        currentStatus,
+        newStatus,
+        'return-before-sale',
+        `Cannot return laptop ${laptop.id}: return date cannot be before sale date`,
       );
     }
 
     if (elapsedTime > RETURN_PERIOD_MS) {
-      throw new Error(
-        'Cannot return laptop: the 14-day return period has expired',
+      throw new LaptopStatusTransitionError(
+        laptop.id,
+        currentStatus,
+        newStatus,
+        'return-window-expired',
+        `Cannot return laptop ${laptop.id}: the 14-day return period has expired`,
       );
     }
   }
