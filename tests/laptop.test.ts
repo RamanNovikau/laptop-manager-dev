@@ -116,6 +116,7 @@ describe('changeLaptopStatus', () => {
       );
 
       expect(result.status).toBe(LaptopStatus.InStock);
+      expect(result.soldAt).toBeUndefined();
     });
 
     test('Sold -> InStock exactly at 14 days', () => {

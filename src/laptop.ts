@@ -95,7 +95,9 @@ export function changeLaptopStatus(
   const soldAt =
     newStatus === LaptopStatus.Sold
       ? currentDate
-      : laptop.soldAt;
+      : newStatus === LaptopStatus.InStock
+        ? undefined
+        : laptop.soldAt;
 
   return {
     ...laptop,
