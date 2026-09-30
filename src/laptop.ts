@@ -1,80 +1,79 @@
 // AI GENERATED
 
-export enum LaptopStatus {
-  InStock = 'InStock',
-  Reserved = 'Reserved',
-  Sold = 'Sold',
-  WrittenOff = 'WrittenOff',
-}
+import {
+  Laptop,
+  LaptopStatus,
+  StatusHistoryEntry,
+} from './types';
 
-// AI GENERATED
-export interface StatusHistoryEntry {
-  previousStatus: LaptopStatus;
-  newStatus: LaptopStatus;
-  date: Date;
-}
-
-// AI GENERATED
-export interface LaptopState {
-  status: LaptopStatus;
-  soldAt?: Date;
-  history: StatusHistoryEntry[];
-}
-
-// AI GENERATED
 const ALLOWED_TRANSITIONS: Record<LaptopStatus, LaptopStatus[]> = {
   [LaptopStatus.InStock]: [
     LaptopStatus.Reserved,
     LaptopStatus.Sold,
     LaptopStatus.WrittenOff,
   ],
-  [LaptopStatus.Reserved]: [LaptopStatus.InStock, LaptopStatus.Sold],
+  [LaptopStatus.Reserved]: [
+    LaptopStatus.InStock,
+    LaptopStatus.Sold,
+  ],
   [LaptopStatus.Sold]: [LaptopStatus.InStock],
   [LaptopStatus.WrittenOff]: [],
 };
 
-// AI GENERATED
-const RETURN_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
+const RETURN_PERIOD_MS = 14 * 24 * 60 * 60 * 1000;
 
-// AI GENERATED
+/**
+ * Changes the laptop status and records the successful transition in history.
+ */
 export function changeLaptopStatus(
-  laptop: LaptopState,
+  laptop: Laptop,
   newStatus: LaptopStatus,
   currentDate: Date,
-): LaptopState {
-  const { status: previousStatus } = laptop;
+): Laptop {
+  const currentStatus = laptop.status;
 
-  if (!ALLOWED_TRANSITIONS[previousStatus].includes(newStatus)) {
+  if (!ALLOWED_TRANSITIONS[currentStatus].includes(newStatus)) {
     throw new Error(
-      `Invalid status transition: ${previousStatus} -> ${newStatus}`,
+      `Invalid status transition: ${currentStatus} -> ${newStatus}`,
     );
   }
 
-  if (previousStatus === LaptopStatus.Sold && newStatus === LaptopStatus.InStock) {
+  if (currentStatus === LaptopStatus.Sold) {
     if (!laptop.soldAt) {
-      throw new Error('Cannot return a sold laptop without a sale date');
+      throw new Error('Cannot process return: sale date is missing');
     }
 
-    const elapsedMs = currentDate.getTime() - laptop.soldAt.getTime();
+    const elapsedTime =
+      currentDate.getTime() - laptop.soldAt.getTime();
 
-    if (elapsedMs < 0 || elapsedMs > RETURN_WINDOW_MS) {
-      throw new Error('Laptop return is allowed only within 14 days after sale');
+    if (elapsedTime < 0) {
+      throw new Error(
+        'Cannot return laptop: return date cannot be before sale date',
+      );
+    }
+
+    if (elapsedTime > RETURN_PERIOD_MS) {
+      throw new Error(
+        'Cannot return laptop: the 14-day return period has expired',
+      );
     }
   }
 
   const historyEntry: StatusHistoryEntry = {
-    previousStatus,
+    previousStatus: currentStatus,
     newStatus,
-    date: new Date(currentDate),
+    date: currentDate,
   };
+
+  const soldAt =
+    newStatus === LaptopStatus.Sold
+      ? currentDate
+      : laptop.soldAt;
 
   return {
     ...laptop,
     status: newStatus,
-    soldAt:
-      newStatus === LaptopStatus.Sold
-        ? new Date(currentDate)
-        : laptop.soldAt,
     history: [...laptop.history, historyEntry],
+    soldAt,
   };
 }
