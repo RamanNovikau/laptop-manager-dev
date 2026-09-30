@@ -137,6 +137,7 @@ describe('changeLaptopStatus', () => {
       );
 
       expect(result.status).toBe(LaptopStatus.InStock);
+      expect(result.soldAt).toBeUndefined();
     });
   });
 
